@@ -1,0 +1,5 @@
+#Version: 2.0
+
+ScriptModules:
+  Tasks:
+    ScriptFile: Tasks.hmi.js
