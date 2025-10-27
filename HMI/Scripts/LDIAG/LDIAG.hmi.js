@@ -81,6 +81,9 @@ const LDIAG_intern = {
   */
   CmdClosePopUp: function () {
   
+    // Trace
+    HMIRuntime.Trace("LDIAG::CmdClosePopUp: PopUp schließen");
+
     // PopUp schließen
     Tags("InstLDIAG_ModuleDiagnosis_extPopUpInterface.cmdClose").Write(1);
 
