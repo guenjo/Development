@@ -60,6 +60,7 @@ VERSION : 1.0
       STATUS_BUSY : Word := 16#7003;   // Status: Bearbeitung
       ERR_IN_BLOCK_OPERATION : Word := 16#8000;   // Fehler: Abarbeitungsfehler
       ERR_UNDEFINED_STATE : Word := 16#8601;   // Fehler: undefinierter State
+	  ERR_CALL_FUNCTION_BLOCK : Word := 16#8603;
       ERR_SQ_MONITORING_TIME : Word := 16#8602;
    END_VAR
 
