@@ -1,0 +1,168 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="init" Datatype="Bool">
+      <Comment>
+        <MultiLanguageText Lang="de-DE">Init SQ</MultiLanguageText>
+        <MultiLanguageText Lang="en-US">init sequence</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="tap" Datatype="Bool">
+      <Comment>
+        <MultiLanguageText Lang="de-DE">Schrittkette Einzelschritt</MultiLanguageText>
+        <MultiLanguageText Lang="en-US">tap next step</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="auto" Datatype="Bool">
+      <Comment>
+        <MultiLanguageText Lang="de-DE">Automatik</MultiLanguageText>
+        <MultiLanguageText Lang="en-US">Auto mode</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="manual" Datatype="Bool">
+      <Comment>
+        <MultiLanguageText Lang="de-DE">Handbetrieb</MultiLanguageText>
+        <MultiLanguageText Lang="en-US">manual mode</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="state" Datatype="DInt">
+      <Comment>
+        <MultiLanguageText Lang="de-DE">aktueller Schritt</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="stateNext" Datatype="DInt">
+      <Comment>
+        <MultiLanguageText Lang="de-DE">nächster Schritt</MultiLanguageText>
+        <MultiLanguageText Lang="en-US">next step</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="stateOld" Datatype="DInt">
+      <Comment>
+        <MultiLanguageText Lang="de-DE">vorhergehender Schritt</MultiLanguageText>
+        <MultiLanguageText Lang="en-US">previos step</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="s1" Datatype="Bool">
+      <Comment>
+        <MultiLanguageText Lang="de-DE">Flanke kommender Schritt</MultiLanguageText>
+        <MultiLanguageText Lang="en-US">rising Edge new state</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="stepDiagText" Datatype="WString[50]" />
+    <Member Name="stepWaittime_1" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="de-DE">Schrittwartezeit</MultiLanguageText>
+        <MultiLanguageText Lang="en-US">waittime</MultiLanguageText>
+      </Comment>
+      <Member Name="timer" Datatype="IEC_TIMER" Version="1.0">
+        <Comment>
+          <MultiLanguageText Lang="de-DE">Timer</MultiLanguageText>
+          <MultiLanguageText Lang="en-US">timer</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="active" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="de-DE">Zeit aktivieren</MultiLanguageText>
+          <MultiLanguageText Lang="en-US">waittime active</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="targettime" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="de-DE">[s] Zielzeit</MultiLanguageText>
+          <MultiLanguageText Lang="en-US">[s] targettime</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="expired" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="de-DE">Zeit abgelaufen</MultiLanguageText>
+          <MultiLanguageText Lang="en-US">waittime expired</MultiLanguageText>
+        </Comment>
+      </Member>
+    </Member>
+    <Member Name="stepErrortime_1" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="de-DE">Schrittfehlerzeit</MultiLanguageText>
+        <MultiLanguageText Lang="en-US">error steptime</MultiLanguageText>
+      </Comment>
+      <Member Name="timer" Datatype="IEC_TIMER" Version="1.0">
+        <Comment>
+          <MultiLanguageText Lang="de-DE">Timer</MultiLanguageText>
+          <MultiLanguageText Lang="en-US">timer</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="active" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="de-DE">Zeit aktivieren</MultiLanguageText>
+          <MultiLanguageText Lang="en-US">errortime active</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="targettime" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="de-DE">[s] Zielzeit</MultiLanguageText>
+          <MultiLanguageText Lang="en-US">[s] targettime</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="expired" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="de-DE">Zeit abgelaufen</MultiLanguageText>
+          <MultiLanguageText Lang="en-US">errortime expired</MultiLanguageText>
+        </Comment>
+      </Member>
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>LTBSE_typeStatemachine</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>de-DE</Culture>
+              <Text>Daten für Schrittkettenwerwaltung</Text>
+            </AttributeList>
+          </MultilingualTextItem>
+          <MultilingualTextItem ID="3" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text>Data </Text>
+            </AttributeList>
+          </MultilingualTextItem>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>fr-FR</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="5" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="6" CompositionName="Items">
+            <AttributeList>
+              <Culture>de-DE</Culture>
+              <Text>Typ Statemachinedata</Text>
+            </AttributeList>
+          </MultilingualTextItem>
+          <MultilingualTextItem ID="7" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text>Data for Statemachine</Text>
+            </AttributeList>
+          </MultilingualTextItem>
+          <MultilingualTextItem ID="8" CompositionName="Items">
+            <AttributeList>
+              <Culture>fr-FR</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

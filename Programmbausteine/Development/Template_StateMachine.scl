@@ -101,7 +101,7 @@ BEGIN
 	    IF #statInternal.init THEN
 	        #statStatemachine.auto := true;
 	        #statStatemachine.manual := false;
-	    END_IF;
+	    END_IF
 	    
 	    #tempAck := false;
 	END_REGION
