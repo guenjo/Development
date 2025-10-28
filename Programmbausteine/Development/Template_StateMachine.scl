@@ -1,0 +1,313 @@
+﻿FUNCTION_BLOCK "Template_StateMachine"
+TITLE = Template_StateMachine
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : 'TBS-E/guj'
+FAMILY : Template
+VERSION : 1.0
+//Vorlage für eine Statemachine als Schrittkettenverwaltung
+   VAR_INPUT 
+      EnableSeq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE: Sequenz freigeben
+      ResetSeq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE: Sequenz initialisieren
+      HaltSeq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE: Seqeunz anhalten
+      Ack : Bool;   // TRUE: Fehler quittieren
+   END_VAR
+
+   VAR_OUTPUT 
+      Diagnosis : "LTBSE_typeDiagnosticsIntern";   // Diagnosestruktur
+   END_VAR
+
+   VAR_IN_OUT 
+      Workdata { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Platzhalter für Workdata
+      Parameter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Platzhalter für Parameter
+   END_VAR
+
+   VAR 
+      statInternal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Static structure for internal tags
+         init { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := true;   // FB Init
+         diagnostics { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "LTBSE_typeDiagnosticsIntern" := (16#0, (), ());   // Diagnose intern
+         emptyDiagnostics { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "LTBSE_typeDiagnosticsIntern";   // Diagnose leer
+      END_STRUCT;
+      statStat : DInt;   // Status
+      statStatemachine { S7_SetPoint := 'False'} : "LTBSE_typeStatemachine" := ((), (), (), (), #STATE_NO_PROCESSING, (), (), (), (), (), ());   // Schrittkettenverwaltung
+      statAck : Struct   // Quittierung
+         q : Bool;
+         clk : Bool;
+         flg : Bool;
+      END_STRUCT;
+   END_VAR
+
+   VAR_TEMP 
+      tempConditionPath1 : Bool;
+      tempConditionPath2 : Bool;
+      tempAck : Bool;
+   END_VAR
+
+   VAR CONSTANT 
+      STATE_NO_PROCESSING : DInt := 0;   // FB state: No processing
+      STATE_PROCESSING_HALT : DInt := 5;
+      STATE_ENABLING : DInt := 10;   // FB state: Enabling
+      STATE_PROCESSING : DInt := 50;   // FB state: Processing
+      STATE_DISABLING : DInt := 90;   // FB state: Disabling
+      STATE_INIT : DInt := 100;
+      STATE_INIT_DONE : DInt := 105;
+      STATE_CHECK_RELEASE : DInt := 110;
+      STATE_IDLE : DInt := 120;
+      STATE_STEP1 : DInt := 130;
+      STATE_STEP2 : DInt := 140;
+      STATE_FINISHED : DInt := 100000;
+      STATUS_NO_ERROR : Word := 16#0000;   // Status: kein Fehler
+      STATUS_NO_PROCESSING : Word := 16#7000;
+      STATUS_BUSY : Word := 16#7003;   // Status: Bearbeitung
+      ERR_IN_BLOCK_OPERATION : Word := 16#8000;   // Fehler: Abarbeitungsfehler
+      ERR_UNDEFINED_STATE : Word := 16#8601;   // Fehler: undefinierter State
+      ERR_SQ_MONITORING_TIME : Word := 16#8602;
+   END_VAR
+
+
+BEGIN
+	REGION BLOCK INFO HEADER
+	    //===============================================================================
+	    // (company) / (c)Copyright (year)
+	    //-------------------------------------------------------------------------------
+	    // Title:            Name Schrittkette
+	    // Comment/Function: Schrittkettenverwaltung 
+	    //                   -
+	    // Library/Family:   -
+	    // Author:           TBS-A 
+	    // Tested with:      S7-1500
+	    // Engineering:      TIA Portal V19
+	    // Restrictions:     -
+	    // Requirements:     "typeStatemachine"
+	    //-------------------------------------------------------------------------------
+	    // Change log table:
+	    // Version  | Date       | Expert in charge       | Changes applied
+	    //----------|------------|------------------------|------------------------------
+	    // 01.00.00 | 2025-02-02 | guj                    |First released version
+	    //===============================================================================
+	END_REGION BLOCK INFO HEADER
+	
+	REGION DESCRIPTION
+	(/*
+	
+	Automatikansteuerung der Supportstation
+	
+	*/)
+	END_REGION DESCRIPTION
+	
+	
+	
+	REGION INIT
+	    IF #statInternal.init THEN
+	        #statStatemachine.auto := true;
+	        #statStatemachine.manual := false;
+	    END_IF;
+	    
+	    #tempAck := false;
+	END_REGION
+	
+	
+	
+	
+	REGION STATE MACHINE
+	    
+	    IF NOT #statStatemachine.auto AND NOT #statStatemachine.manual THEN
+	        #statStatemachine.auto := true;
+	    END_IF;
+	    
+	    // Temp Weiterschaltbedingung Init
+	    #tempConditionPath1 := false;
+	    #tempConditionPath2 := false;
+	    
+	    #statStatemachine.stepDiagText := wstring#'-?-';
+	    
+	    CASE #statStatemachine.state OF // State machine of FB
+	        #STATE_NO_PROCESSING:
+	            REGION No Processing
+	                #statStatemachine.stepDiagText := wstring#'Keine Bearbeitung';
+	                // Diag
+	                #statInternal.diagnostics.subfunctionStatus := #STATUS_NO_PROCESSING;
+	            END_REGION No Processing
+	            
+	        #STATE_PROCESSING:
+	            REGION Processing
+	                #statStatemachine.stepDiagText := wstring#'Prozess';
+	                // Diag
+	                #statInternal.diagnostics.subfunctionStatus := #STATUS_NO_ERROR;
+	            END_REGION Processing
+	            
+	        #STATE_PROCESSING_HALT:
+	            REGION Processing halt
+	                // Schritttext
+	                #statStatemachine.stepDiagText := wstring#'Sequenz angehalten';
+	                
+	                // Diag
+	                #statInternal.diagnostics.subfunctionStatus := #STATUS_NO_PROCESSING;
+	                
+	            END_REGION Processing halt
+	            
+	        #STATE_INIT:
+	            
+	            REGION Init
+	                #statStatemachine.stepDiagText := wstring#'Sequenz initialisieren';
+	                
+	                // Schrittzeiten
+	                #statStatemachine.stepWaittime_1.active := false;
+	                #statStatemachine.stepErrortime_1.active := false;
+	                
+	                // Diag
+	                #statInternal.diagnostics.subfunctionStatus := #STATUS_NO_ERROR;
+	                
+	                
+	                // Nächster Schritt
+	                #statStatemachine.stateNext := #STATE_INIT_DONE;
+	                
+	            END_REGION Init
+	            
+	        #STATE_INIT_DONE:
+	            
+	            REGION Init done
+	                #statStatemachine.stepDiagText := wstring#'Sequenz initialisieren abgeschlosssen';
+	                
+	                // Schrittzeiten
+	                #statStatemachine.stepWaittime_1.active := false;
+	                #statStatemachine.stepErrortime_1.active := false;
+	                
+	                // Diag
+	                #statInternal.diagnostics.subfunctionStatus := #STATUS_NO_ERROR;
+	                
+	                // Nächster Schritt
+	                IF NOT #statStatemachine.init AND NOT #ResetSeq THEN
+	                    #statStatemachine.stateNext := #STATE_CHECK_RELEASE;
+	                END_IF;
+	                
+	            END_REGION Init done
+	            
+	        #STATE_CHECK_RELEASE:
+	            REGION Check Release
+	                // Schritttext
+	                #statStatemachine.stepDiagText := wstring#'Warte auf Freigabe';
+	                
+	                // Nächster Schritt
+	                IF #tempConditionPath1 THEN
+	                    #statStatemachine.stateNext := #STATE_IDLE;
+	                END_IF;
+	            END_REGION Ceck Release
+	            
+	        #STATE_IDLE:
+	            REGION Idle             
+	                // Schritttext
+	                #statStatemachine.stepDiagText := wstring#'Bereit';
+	                
+	                
+	                // Nächster Schritt
+	                IF #tempConditionPath1 THEN
+	                    #statStatemachine.stateNext := #STATE_STEP1;
+	                END_IF;
+	            END_REGION Idle
+	            
+	        #STATE_STEP1:
+	            REGION Check Release
+	                // Nächster Schritt
+	                IF #tempConditionPath1 THEN
+	                    #statStatemachine.stateNext := #STATE_STEP2;
+	                END_IF;
+	            END_REGION Ceck Release
+	                
+	        ELSE // Undefined state in state machine reached
+	            REGION Undefined state
+	                #statInternal.diagnostics.subfunctionStatus := #ERR_UNDEFINED_STATE;
+	                
+	            END_REGION Undefined state
+	    END_CASE;
+	END_REGION STATEMACHINE
+	
+	
+	REGION STATEMANAGER
+	    REGION ENABLING/DISABLING
+	        
+	        IF NOT #EnableSeq THEN
+	            #statStatemachine.stateNext := #STATE_NO_PROCESSING;
+	        ELSIF #HaltSeq THEN
+	            #statStatemachine.stateNext := #STATE_PROCESSING_HALT;
+	        END_IF;
+	        
+	        IF #ResetSeq AND NOT #statStatemachine.init THEN
+	            #statStatemachine.stateNext := #STATE_INIT;
+	            #statStatemachine.init := true;
+	        ELSIF (#statStatemachine.state = #STATE_INIT_DONE) THEN
+	            #statStatemachine.init := false;
+	        END_IF;
+	        
+	        
+	    END_REGION ENABLING/DISABLING
+	    
+	    REGION Statemanager
+	        IF (#statStatemachine.state <> #statStatemachine.stateNext) THEN
+	            IF #statStatemachine.auto OR
+	                (#statStatemachine.manual AND #statStatemachine.tap)
+	            THEN
+	                // Nächster Schritt, alten merken
+	                #statStatemachine.stateOld := #statStatemachine.state;
+	                #statStatemachine.state := #statStatemachine.stateNext;
+	            END_IF;
+	            
+	            // Schrittzeiten
+	            #statStatemachine.stepWaittime_1.active := false;
+	            #statStatemachine.stepErrortime_1.active := false;
+	            
+	            // Tippen zurücksetzen
+	            #statStatemachine.tap := false;
+	            
+	        END_IF;
+	    END_REGION
+	    
+	    REGION Step Timer
+	        
+	        // Schrittacktivierungszeit
+	        #statStatemachine.stepWaittime_1.timer.TON(IN := #statStatemachine.stepWaittime_1.active,
+	                                                   PT := DINT_TO_TIME(REAL_TO_DINT(#statStatemachine.stepWaittime_1.targettime * 1000.0)),
+	                                                   Q => #statStatemachine.stepWaittime_1.expired);
+	        // Schrittüberwachungszeit
+	        #statStatemachine.stepErrortime_1.timer.TON(IN := #statStatemachine.stepErrortime_1.active AND NOT #statAck.q,
+	                                                    PT := DINT_TO_TIME(REAL_TO_DINT(#statStatemachine.stepErrortime_1.targettime * 1000.0)),
+	                                                    Q => #statStatemachine.stepErrortime_1.expired);
+	    END_REGION
+	    
+	END_REGION STATEMANAGER
+	
+	REGION ACK
+	    #statAck.clk := (#tempAck OR #Ack) AND (#statInternal.diagnostics.subfunctionStatus > 16#8000) ;
+	    #statAck.q := NOT #statAck.clk AND #statAck.flg;
+	    #statAck.flg := #statAck.clk;
+	END_REGION
+	
+	REGION DIAGNOSIS
+	    IF #statStatemachine.stepErrortime_1.expired THEN
+	        #statInternal.diagnostics.subfunctionStatus := #ERR_SQ_MONITORING_TIME;
+	    END_IF;
+	    
+	    IF #statAck.q THEN
+	        #statInternal.diagnostics.subfunctionStatus := #STATUS_NO_ERROR;
+	    END_IF;
+	    
+	    IF #statInternal.diagnostics.subfunctionStatus > 16#8000 THEN
+	        #statInternal.diagnostics.status := #ERR_IN_BLOCK_OPERATION;
+	    ELSIF (#statInternal.diagnostics.subfunctionStatus = #STATUS_NO_ERROR) AND
+	        (#statStatemachine.state <> #STATE_NO_PROCESSING) AND (#statStatemachine.state <> #STATE_PROCESSING_HALT) THEN
+	        #statInternal.diagnostics.status := #STATUS_NO_PROCESSING;
+	    ELSIF (#statInternal.diagnostics.subfunctionStatus = #STATUS_NO_ERROR) AND (#statStatemachine.state > #STATE_PROCESSING) THEN
+	        #statInternal.diagnostics.status := #STATUS_BUSY;
+	    ELSE
+	        #statInternal.diagnostics.status := #STATUS_NO_ERROR;
+	    END_IF;
+	END_REGION
+	
+	REGION OUTPUTS
+	    #Diagnosis := #statInternal.diagnostics;
+	END_REGION OUTPUTS
+	
+	REGION RESET INIT
+	    #statInternal.init := false;
+	END_REGION
+END_FUNCTION_BLOCK
+
