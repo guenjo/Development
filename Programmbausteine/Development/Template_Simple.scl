@@ -1,0 +1,217 @@
+﻿FUNCTION_BLOCK "Template_Simple"
+TITLE = Controller4711
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : 'TBS-E/guj'
+FAMILY : Template
+VERSION : 1.0
+   VAR_INPUT 
+      Ack : Bool;   // TRUE: Fehler quittieren
+      AtuvalValue : Real;   // [%] Aktueller Istwert
+      Setpoint : Real;   // [%] Sollwert
+      LimitLow1 : Real;   // [%] Unterer Grenzwert 1
+      LimitHigh1 : Real;   // [%] Oberer Grenzwert 1
+      LimitLow2 : Real;   // [%] Unterer Grenzwert 2 (kritisch)
+      LimitHigh2 : Real;   // [%] Oberer Grenzwert 2 (kritisch)
+   END_VAR
+
+   VAR_OUTPUT 
+      Diagnosis : "LTBSE_typeDiagnosticsIntern";   // Diagnosestruktur
+      TargetValue : Real;   // [%] Sollwert für Antrieb
+      LimitLow1Active : Bool;   // Unterer Grenzwert 1 aktiv
+      LimitHigh1Active : Bool;   // Oberer Grenzwert 1 aktiv
+      LimitLow2Active : Bool;   // Unterer Grenzwert 2 aktiv
+      LimitHigh2Active : Bool;   // Oberer Grenzwert 2 aktiv
+   END_VAR
+
+   VAR_IN_OUT 
+      Workdata { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Platzhalter für Workdata
+      Parameter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Platzhalter für Parameter
+   END_VAR
+
+   VAR 
+      statInternal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Static structure for internal tags
+         init { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   // FB Init
+         diagnostics { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "LTBSE_typeDiagnosticsIntern" := (16#0000, (), ());   // Diagnose intern
+         emptyDiagnostics { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "LTBSE_typeDiagnosticsIntern";   // Diagnose leer
+      END_STRUCT;
+      statAck { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Quittierung
+         q { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+         clk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+         flg { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      END_STRUCT;
+      instTimeoutController {InstructionName := 'IEC_TIMER'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : IEC_TIMER;
+      instPID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Platzhalter
+   END_VAR
+
+   VAR_TEMP 
+      tempConditionPath1 : Bool;
+      tempConditionPath2 : Bool;
+      tempAck : Bool;
+      tempValueInRage : Bool;
+      tempErrorPara : Bool;   // Parameterfehler
+      tempLimitLow1Active : Bool;   // Grenzwert 1 erreicht
+      tempLimitLow2Active : Bool;   // Grenzwert 2 erreicht
+      tempLimitHigh1Active : Bool;   // Grenzwert 1 erreicht
+      tempLimitHigh2Active : Bool;   // Grenzwert 2 erreicht
+      tempTargetValueController : Real;   // Reglerausgabe
+      tempAckAuto : Bool;   // automatische Quittierung
+      tempTimeoutController : Bool;   // Timeout Grenzwertüberwachung
+   END_VAR
+
+   VAR CONSTANT 
+      STATUS_NO_ERROR : Word := 16#0000;   // Status: kein Fehler
+      STATUS_NO_PROCESSING : Word := 16#7000;   // Status: keine Bearbeitung
+      STATUS_HIGH_LIMIT1_REACHED : Word := 16#7003;   // Status: Oberer Warnschwelle überschritten
+      STATUS_LOW_LIMIT1_REACHED : Word := 16#7004;   // Status: Unterer Warnschwelle unterschritten
+      ERR_IN_BLOCK_OPERATION : Word := 16#8000;   // Fehler: Abarbeitungsfehler
+      ERR_HIGH_LIMIT2_REACHED : Word := 16#8001;   // Fehler: Obere Alarmschwelle überschritten
+      ERR_LOW_LIMIT2_REACHED : Word := 16#8002;   // Fehler: Untere Alarmschwelle unterschritten
+      ERR_PARAMETERCHECK : Word := 16#8201;   // Error: Fehlerhafte Parameterwerte für Grenzwerte
+      ERR_TIMEOUT_CONTROLLER : Word := 16#8602;   // Fehler: Überwachungszeit Sollwert außerhalb Grenzen
+   END_VAR
+
+
+BEGIN
+	REGION BLOCK INFO HEADER
+	    //===============================================================================
+	    // (company) / (c)Copyright (year)
+	    //-------------------------------------------------------------------------------
+	    // Title:            
+	    // Comment/Function: 
+	    //                   -
+	    // Library/Family:   -
+	    // Author:           TBS-A 
+	    // Tested with:      S7-1500
+	    // Engineering:      TIA Portal V19
+	    // Restrictions:     -
+	    // Requirements:     "LTBSE_typeDiagnosticsIntern"
+	    //-------------------------------------------------------------------------------
+	    // Change log table:
+	    // Version  | Date       | Expert in charge       | Changes applied
+	    //----------|------------|------------------------|------------------------------
+	    // 01.00.00 | 2025-02-02 | guj                    | First released version
+	    // 01.00.01 | 2025-06-10 | guj                    | Änderungsbeschreibung oder Issue-Nr.
+	    //===============================================================================
+	END_REGION BLOCK INFO HEADER
+	
+	REGION DESCRIPTION
+	(/*
+	
+	Beschreibung: Reglegung für 
+	
+	*/)
+	END_REGION DESCRIPTION
+	
+	
+	REGION INIT
+	    IF #statInternal.init THEN
+	        // Initialisierungen
+	        #statInternal.diagnostics := #statInternal.emptyDiagnostics;
+	        #statAck.clk := false;
+	        #statAck.q := false;
+	        #statAck.flg := false;
+	    END_IF;
+	    
+	    // Initialisierungen Temp Variablen     
+	    #tempAck := false;
+	    #tempLimitHigh1Active := false;
+	    #tempLimitHigh2Active := false;
+	    #tempLimitLow1Active := false;
+	    #tempLimitLow2Active := false;
+	    #tempValueInRage := false;
+	    
+	END_REGION
+	
+	
+	REGION PARAMETERCHECK
+	    // Platzhalter für Parameterprüfung
+	    #tempErrorPara := false
+	    OR (#LimitLow1 >= #LimitHigh1)
+	    OR (#LimitLow1 >= #LimitHigh2)
+	    OR (#LimitLow2 >= #LimitHigh1)
+	    OR (#LimitLow2 >= #LimitHigh2)
+	    OR (#LimitHigh1 > 100.0)
+	    OR (#LimitHigh2 > 100.0);
+	    
+	    IF #tempErrorPara THEN
+	        #statInternal.diagnostics.subfunctionStatus := #ERR_PARAMETERCHECK;
+	    END_IF;
+	END_REGION PARAMETERCHECK
+	
+	REGION CHECK ACTUAL VALUE
+	    // Prüfen ob Grenzwerte erreicht wurden
+	    IF NOT #tempErrorPara THEN
+	        IF #AtuvalValue > #LimitHigh2 THEN
+	            #tempLimitHigh2Active := true;
+	            #statInternal.diagnostics.subfunctionStatus := #ERR_HIGH_LIMIT2_REACHED;
+	        ELSIF #AtuvalValue > #LimitHigh1 THEN
+	            #tempLimitHigh1Active := true;
+	            #statInternal.diagnostics.subfunctionStatus := #STATUS_HIGH_LIMIT1_REACHED;
+	            #tempAckAuto := true;
+	        ELSIF #AtuvalValue < #LimitLow2 THEN
+	            #tempLimitLow2Active := true;
+	            #statInternal.diagnostics.subfunctionStatus := #ERR_LOW_LIMIT2_REACHED;
+	        ELSIF #AtuvalValue < #LimitLow1 THEN
+	            #tempLimitLow1Active := true;
+	            #statInternal.diagnostics.subfunctionStatus := #STATUS_HIGH_LIMIT1_REACHED;
+	            #tempAckAuto := true;
+	        ELSE
+	            #tempValueInRage := true;
+	            #statInternal.diagnostics.subfunctionStatus := #STATUS_NO_ERROR;
+	        END_IF;
+	    END_IF;
+	END_REGION CHECK ACTUAL VALUE
+	
+	REGION TIMEOUT LIMITS_1 REACHED
+	    // Überwachungzeit für Grenzwertüberschreitung
+	    // Sollwert kann nicht weiter erhöht/erniedrigt werden
+	    // Istwert bleibt weiterhin außerhalb der Grenzwerte
+	    // 
+	    #instTimeoutController.TON(IN := NOT #tempValueInRage,
+	                               PT := t#1m,
+	                               Q => #tempTimeoutController);
+	    
+	    IF NOT #tempErrorPara THEN
+	        IF #tempTimeoutController THEN
+	            #statInternal.diagnostics.subfunctionStatus := #ERR_TIMEOUT_CONTROLLER;
+	        END_IF;
+	    END_IF;
+	    
+	END_REGION TIMEOUT LIMIT_1 REACHED
+	
+	REGION CONTROL
+	    // PID Regelung
+	    #tempTargetValueController := 0.0; // Platzhalter für Regelungsausgabe
+	END_REGION CONTROL
+	
+	REGION ACK
+	    #statAck.clk := (#tempAck OR #Ack) AND (#statInternal.diagnostics.subfunctionStatus > 16#8000);
+	    #statAck.q := NOT #statAck.clk AND #statAck.flg;
+	    #statAck.flg := #statAck.clk;
+	END_REGION
+	
+	REGION DIAGNOSIS
+	    
+	    IF #statAck.q OR ((#statInternal.diagnostics.subfunctionStatus = #STATUS_NO_ERROR) AND #tempAckAuto) THEN
+	        #statInternal.diagnostics.status := #STATUS_NO_ERROR;
+	    ELSE
+	        #statInternal.diagnostics.status := #statInternal.diagnostics.subfunctionStatus;
+	    END_IF;
+	    
+	    
+	END_REGION
+	
+	REGION OUTPUTS
+	    #Diagnosis := #statInternal.diagnostics;
+	    #LimitLow1Active := #tempLimitLow1Active;
+	    #LimitLow2Active := #tempLimitLow2Active;
+	    #LimitHigh1Active := #tempLimitHigh1Active;
+	    #LimitHigh2Active := #tempLimitHigh2Active;
+	    #TargetValue := #tempTargetValueController;
+	END_REGION OUTPUTS
+	
+	REGION RESET INIT
+	    #statInternal.init := false;
+	END_REGION
+END_FUNCTION_BLOCK
+

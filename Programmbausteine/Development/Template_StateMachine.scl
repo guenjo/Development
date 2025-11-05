@@ -23,8 +23,8 @@ VERSION : 1.0
 
    VAR 
       statInternal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Static structure for internal tags
-         init { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := true;   // FB Init
-         diagnostics { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "LTBSE_typeDiagnosticsIntern" := (16#0, (), ());   // Diagnose intern
+         init { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   // FB Init
+         diagnostics { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "LTBSE_typeDiagnosticsIntern" := (16#0000, (), ());   // Diagnose intern
          emptyDiagnostics { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "LTBSE_typeDiagnosticsIntern";   // Diagnose leer
       END_STRUCT;
       statStat : DInt;   // Status
@@ -60,7 +60,7 @@ VERSION : 1.0
       STATUS_BUSY : Word := 16#7003;   // Status: Bearbeitung
       ERR_IN_BLOCK_OPERATION : Word := 16#8000;   // Fehler: Abarbeitungsfehler
       ERR_UNDEFINED_STATE : Word := 16#8601;   // Fehler: undefinierter State
-	  ERR_CALL_FUNCTION_BLOCK : Word := 16#8603;
+      ERR_CALL_FUNCTION_BLOCK : Word := 16#8603;
       ERR_SQ_MONITORING_TIME : Word := 16#8602;
    END_VAR
 
@@ -101,7 +101,7 @@ BEGIN
 	    IF #statInternal.init THEN
 	        #statStatemachine.auto := true;
 	        #statStatemachine.manual := false;
-	    END_IF
+	    END_IF;
 	    
 	    #tempAck := false;
 	END_REGION
