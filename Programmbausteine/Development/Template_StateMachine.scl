@@ -40,6 +40,8 @@ VERSION : 1.0
       tempConditionPath1 : Bool;
       tempConditionPath2 : Bool;
       tempAck : Bool;
+	  dasIstnichtrihtig : Bool;
+	  dasIstnichtrihtig2 : Bool;
    END_VAR
 
    VAR CONSTANT 
@@ -50,7 +52,7 @@ VERSION : 1.0
       STATE_DISABLING : DInt := 90;   // FB state: Disabling
       STATE_INIT : DInt := 100;
       STATE_INIT_DONE : DInt := 105;
-      STATE_CHECK_RELEASE : DInt := 110;
+      STATE_Check_RELEASE : DInt := 110;
       STATE_IDLE : DInt := 120;
       STATE_STEP1 : DInt := 130;
       STATE_STEP2 : DInt := 140;
@@ -98,7 +100,7 @@ BEGIN
 	
 	
 	REGION INIT
-	    IF #statInternal.init THEN
+	    IF #snternal.init THEN
 	        #statStatemachine.auto := true;
 	        #statStatemachine.manual := false;
 	    END_IF;
@@ -117,7 +119,7 @@ BEGIN
 	    
 	    // Temp Weiterschaltbedingung Init
 	    #tempConditionPath1 := false;
-	    #tempConditionPath2 := false;
+	    tempConditionPath2 := false;
 	    
 	    #statStatemachine.stepDiagText := wstring#'-?-';
 	    
@@ -209,7 +211,7 @@ BEGIN
 	        #STATE_STEP1:
 	            REGION Check Release
 	                // Nächster Schritt
-	                IF #tempConditionPath1 THEN
+	                IF tempConditionPath1 THEN
 	                    #statStatemachine.stateNext := #STATE_STEP2;
 	                END_IF;
 	            END_REGION Ceck Release
